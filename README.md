@@ -363,3 +363,105 @@ Bei Problemen:
 **🎉 Fertig!** Ihr LinkScanner läuft jetzt vollautomatisch und scannt URLs sicher über VirusTotal.
 
 **Tipp:** Bookmarken Sie diese README für schnelle Referenz! 📚
+
+# Ergänzung zur bestehenden README:
+
+## 🖥️ Plattformspezifische Installation
+
+### Windows
+
+1. **Docker Desktop für Windows installieren:**
+   - [Docker Desktop Download](https://www.docker.com/products/docker-desktop/)
+   - WSL2 Backend aktivieren (empfohlen)
+
+2. **Autostart konfigurieren:**
+   ```batch
+   # start-linkscanner.bat ausführen
+   # Oder in Windows Startup-Ordner verlinken:
+   # Win+R → shell:startup
+   ```
+
+### macOS
+
+1. **Docker Desktop für Mac installieren:**
+   - [Docker Desktop Download](https://www.docker.com/products/docker-desktop/)
+   - Apple Silicon (M1/M2) oder Intel
+
+2. **Autostart konfigurieren:**
+   ```bash
+   # start-linkscanner.sh ausführen
+   # Oder als Launch Agent:
+   cp start-linkscanner.sh ~/Library/LaunchAgents/
+   ```
+
+3. **Chrome Extension laden:**
+   - Chrome → Einstellungen → Erweiterungen
+   - Entwicklermodus aktivieren
+   - "Entpackte Erweiterung laden"
+
+### Linux (Ubuntu/Debian)
+
+1. **Docker installieren:**
+   ```bash
+   sudo apt update
+   sudo apt install docker.io docker-compose
+   sudo usermod -aG docker $USER
+   # Neu anmelden erforderlich
+   ```
+
+2. **Autostart (systemd):**
+   ```bash
+   sudo systemctl enable docker
+   ./start-linkscanner.sh
+   ```
+
+## 🔧 Plattformspezifische Befehle
+
+| Aktion | Windows | Mac/Linux |
+|--------|---------|-----------|
+| Container starten | `docker-compose up -d` | `docker-compose up -d` |
+| Logs anzeigen | `docker-compose logs` | `docker-compose logs` |
+| Container stoppen | `docker-compose down` | `docker-compose down` |
+| API testen | `curl http://localhost:8000` | `curl http://localhost:8000` |
+| Docker Status | `docker ps` | `docker ps` |
+
+## 🚨 Plattformspezifische Problembehebung
+
+### Windows-spezifische Probleme
+
+**WSL2 Backend Fehler:**
+```bash
+# In PowerShell als Administrator:
+wsl --update
+wsl --set-default-version 2
+```
+
+**Port bereits verwendet:**
+```cmd
+# Port 8000 prüfen:
+netstat -ano | findstr :8000
+# Prozess beenden falls nötig
+```
+
+### Mac-spezifische Probleme
+
+**M1/M2 Kompatibilität:**
+```bash
+# ARM64 Docker Image erzwingen:
+docker-compose build --platform linux/amd64
+```
+
+**Berechtigung verweigert:**
+```bash
+# Docker Gruppe hinzufügen (falls nicht automatisch):
+sudo dscl . append /Groups/_developer GroupMembership $(whoami)
+```
+
+### Linux-spezifische Probleme
+
+**Docker Berechtigung:**
+```bash
+# User zur Docker-Gruppe hinzufügen:
+sudo usermod -aG docker $USER
+newgrp docker
+```

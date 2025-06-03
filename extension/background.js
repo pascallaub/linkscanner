@@ -60,9 +60,43 @@ function startScan(url, tab) {
   scanUrl(url, tab);
 }
 
+// Platform-Detection hinzufügen:
+function detectPlatform() {
+  return new Promise((resolve) => {
+    chrome.runtime.getPlatformInfo((info) => {
+      resolve(info.os); // "win", "mac", "linux"
+    });
+  });
+}
+
+// API URLs basierend auf Platform
+async function getAPIUrl() {
+  const platform = await detectPlatform();
+  const baseUrls = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000'
+  ];
+  
+  // Auf allen Plattformen beide URLs versuchen
+  for (const url of baseUrls) {
+    try {
+      const response = await fetch(`${url}/`);
+      if (response.ok) {
+        return url;
+      }
+    } catch (error) {
+      continue;
+    }
+  }
+  
+  throw new Error('API not available on any URL');
+}
+
+// In scan-Funktionen verwenden:
 async function scanUrl(url, tab) {
   try {
-    const response = await fetch(`http://localhost:8000/scan?url=${encodeURIComponent(url)}`);
+    const apiUrl = await getAPIUrl();
+    const response = await fetch(`${apiUrl}/scan?url=${encodeURIComponent(url)}`);
     const result = await response.json();
     
     chrome.tabs.sendMessage(tab.id, {

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Link Scanner",
   "version": "1.0",
-  "description": "Scan links with VirusTotal",
+  "description": "Scan links with VirusTotal (Windows & Mac compatible)",
   "permissions": [
     "activeTab",
     "contextMenus",
@@ -11,7 +11,8 @@
     "notifications"
   ],
   "host_permissions": [
-    "http://localhost:8000/*"
+    "http://localhost:8000/*",
+    "http://127.0.0.1:8000/*"
   ],
   "background": {
     "service_worker": "background.js"

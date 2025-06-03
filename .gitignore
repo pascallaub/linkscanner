@@ -1,1 +1,25 @@
+# Environment
 .env
+
+# Platform-specific
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Docker
+.docker/
+
+# Rate limit data
+data/
+rate_limits.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
