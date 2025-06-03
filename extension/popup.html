@@ -1,129 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
-  <style>
-    body {
-      width: 400px;
-      padding: 20px;
-      font-family: Arial, sans-serif;
-    }
-    .input-group {
-      margin-bottom: 15px;
-    }
-    label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-    }
-    input[type="url"] {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    button {
-      background: #4CAF50;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      width: 100%;
-    }
-    button:hover {
-      background: #45a049;
-    }
-    button:disabled {
-      background: #cccccc;
-      cursor: not-allowed;
-    }
-    #result {
-      margin-top: 15px;
-      padding: 10px;
-      border-radius: 4px;
-    }
-    .error {
-      background: #ffebee;
-      color: #c62828;
-    }
-    .success {
-      background: #e8f5e8;
-      color: #2e7d32;
-    }
-    .warning {
-      background: #fff3e0;
-      color: #ef6c00;
-    }
-    .scanning {
-      background: #e3f2fd;
-      color: #1976d2;
-      text-align: center;
-    }
-    .progress-container {
-      margin: 10px 0;
-    }
-    .progress-bar {
-      width: 100%;
-      height: 20px;
-      background-color: #f0f0f0;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #4CAF50, #45a049, #4CAF50);
-      background-size: 200% 100%;
-      animation: progressAnimation 2s ease-in-out infinite;
-      width: 100%;
-    }
-    @keyframes progressAnimation {
-      0% {
-        background-position: 200% 0;
-      }
-      100% {
-        background-position: -200% 0;
-      }
-    }
-    
-    /* Rate Limit Styles */
-    #rateLimitInfo {
-      background: #f5f5f5;
-      padding: 10px;
-      border-radius: 4px;
-      margin-bottom: 15px;
-      font-size: 12px;
-    }
-    .rate-limit-item {
-      margin-bottom: 8px;
-    }
-    .rate-limit-item:last-child {
-      margin-bottom: 0;
-    }
-    .rate-limit-item .progress-bar {
-      height: 6px;
-      margin-top: 2px;
-    }
-    .rate-limit-item .progress-fill {
-      background: #2196F3;
-      animation: none;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Link Scanner</title>
+  <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <h2>Link Scanner</h2>
+  <div class="header">
+    <h2>🔍 Link Scanner</h2>
+    <p>Advanced scanning with VT Graph</p>
+  </div>
   
-  <div id="rateLimitInfo">
-    Loading API status...
+  <div class="context-info">
+    <strong>💡 Tipp:</strong> Rechtsklick auf jeden Link oder jede Seite für direkten Zugriff auf Quick/Deep Scan Optionen!
   </div>
   
   <div class="input-group">
-    <label for="urlInput">Enter URL to scan:</label>
-    <input type="url" id="urlInput" placeholder="https://example.com">
+    <label for="urlInput">Oder URL manuell eingeben:</label>
+    <input type="url" id="urlInput" placeholder="https://example.com" autocomplete="url">
   </div>
   
-  <button id="scanBtn">Scan URL</button>
+  <div class="button-group">
+    <button id="quickScan" class="quick-scan" type="button">
+      🚀 Quick Scan
+    </button>
+    <button id="deepScan" class="deep-scan" type="button">
+      🕸️ Deep Scan
+    </button>
+  </div>
   
-  <div id="result"></div>
+  <div id="status" class="status" role="alert"></div>
+  
+  <!-- Rate Limit Info Bereich -->
+  <div id="rateLimitInfo" class="rate-limit-info"></div>
+  
+  <div class="shortcuts">
+    <strong>⌨️ Tastenkürzel:</strong><br>
+    Enter = Quick Scan<br>
+    Ctrl+Enter = Deep Scan
+  </div>
+  
+  <div class="info-box">
+    <strong>Quick Scan:</strong> Basis VirusTotal Check (1-2 API Calls)<br>
+    <strong>Deep Scan:</strong> Erweiterte Analyse mit VT Graph, Domain Reputation, verwandte URLs & DNS Analyse (4-6 API Calls)
+  </div>
   
   <script src="popup.js"></script>
 </body>

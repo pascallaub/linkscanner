@@ -22,94 +22,165 @@ function showAPIWarning() {
   });
 }
 
-chrome.contextMenus.create({
-  id: "scanLink",
-  title: "Scan Link with VirusTotal",
-  contexts: ["link"]
+console.log("Link Scanner Background loaded");
+
+let scanInProgress = false;
+
+// Context Menu erstellen
+chrome.runtime.onInstalled.addListener(() => {
+  // Parent Menu
+  chrome.contextMenus.create({
+    id: "linkScannerParent",
+    title: "Link Scanner",
+    contexts: ["link", "page"]
+  });
+
+  // Quick Scan
+  chrome.contextMenus.create({
+    id: "quickScan",
+    parentId: "linkScannerParent",
+    title: "Quick Scan",
+    contexts: ["link", "page"]
+  });
+
+  // Deep Scan
+  chrome.contextMenus.create({
+    id: "deepScan",
+    parentId: "linkScannerParent", 
+    title: "Deep Scan (VT Graph)",
+    contexts: ["link", "page"]
+  });
+
+  console.log("Context menus created");
 });
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === "scanLink") {
-    // Erst prüfen ob Content Script bereit ist
-    chrome.tabs.sendMessage(tab.id, {action: "ping"}, (response) => {
-      if (chrome.runtime.lastError) {
-        console.log("Content script not ready, injecting...");
-        // Content Script manuell injizieren
-        chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: ['content.js']
-        }, () => {
-          // Nach Injektion nochmal versuchen
-          setTimeout(() => {
-            startScan(info.linkUrl, tab);
-          }, 100);
-        });
-      } else {
-        startScan(info.linkUrl, tab);
-      }
-    });
+// Context Menu Click Handler
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  console.log("Context menu clicked:", info.menuItemId, info);
+  
+  if (scanInProgress) {
+    console.log("Scan already in progress, ignoring");
+    return;
   }
-});
 
-function startScan(url, tab) {
-  chrome.tabs.sendMessage(tab.id, {
-    action: "showScanProgress",
-    url: url
-  });
-  
-  scanUrl(url, tab);
-}
-
-// Platform-Detection hinzufügen:
-function detectPlatform() {
-  return new Promise((resolve) => {
-    chrome.runtime.getPlatformInfo((info) => {
-      resolve(info.os); // "win", "mac", "linux"
-    });
-  });
-}
-
-// API URLs basierend auf Platform
-async function getAPIUrl() {
-  const platform = await detectPlatform();
-  const baseUrls = [
-    'http://localhost:8000',
-    'http://127.0.0.1:8000'
-  ];
-  
-  // Auf allen Plattformen beide URLs versuchen
-  for (const url of baseUrls) {
-    try {
-      const response = await fetch(`${url}/`);
-      if (response.ok) {
-        return url;
-      }
-    } catch (error) {
-      continue;
-    }
-  }
-  
-  throw new Error('API not available on any URL');
-}
-
-// In scan-Funktionen verwenden:
-async function scanUrl(url, tab) {
   try {
-    const apiUrl = await getAPIUrl();
-    const response = await fetch(`${apiUrl}/scan?url=${encodeURIComponent(url)}`);
-    const result = await response.json();
+    scanInProgress = true;
     
-    chrome.tabs.sendMessage(tab.id, {
-      action: "showScanResult",
-      url: url,
-      result: result
+    // URL bestimmen
+    let url = info.linkUrl || info.pageUrl || tab.url;
+    console.log("Scanning URL:", url);
+    
+    const enhanced = info.menuItemId === "deepScan";
+    
+    // Content Script injizieren falls nötig
+    await ensureContentScript(tab.id);
+    
+    // Scan starten
+    await performScan(tab, url, enhanced);
+    
+  } catch (error) {
+    console.error("Context menu scan failed:", error);
+    
+    // Fehler anzeigen
+    try {
+      await chrome.tabs.sendMessage(tab.id, {
+        action: "showError",
+        error: error.message
+      });
+    } catch (msgError) {
+      console.error("Could not show error:", msgError);
+    }
+  } finally {
+    scanInProgress = false;
+  }
+});
+
+async function ensureContentScript(tabId) {
+  try {
+    // Test ob Content Script bereits läuft
+    await chrome.tabs.sendMessage(tabId, { action: "ping" });
+    console.log("Content script already active");
+  } catch (error) {
+    console.log("Injecting content script...");
+    await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      files: ['content.js']
     });
+    
+    // Warten auf Initialisierung
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+}
+
+async function performScan(tab, url, enhanced) {
+  console.log(`Starting ${enhanced ? 'deep' : 'quick'} scan for:`, url);
+  
+  try {
+    // Progress anzeigen
+    await chrome.tabs.sendMessage(tab.id, {
+      action: "showProgress",
+      url: url,
+      enhanced: enhanced
+    });
+    
+    // API Call
+    const endpoint = enhanced ? '/enhanced-scan' : '/scan';
+    const apiUrl = `http://localhost:8000${endpoint}?url=${encodeURIComponent(url)}`;
+    
+    console.log("API URL:", apiUrl);
+    
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API Error: ${response.status} - ${errorText}`);
+    }
+    
+    const result = await response.json();
+    console.log("Scan result:", result);
+    
+    // Ergebnis anzeigen mit Rate Limit Info
+    await chrome.tabs.sendMessage(tab.id, {
+      action: "showResult",
+      url: url,
+      result: result,
+      enhanced: enhanced
+    });
+    
+    // Rate Limit Info an alle offenen Popups senden
+    try {
+      chrome.runtime.sendMessage({
+        action: "updateRateLimit",
+        rateLimitInfo: result.rate_limit_info
+      });
+    } catch (error) {
+      console.log("No popup open to update rate limit info");
+    }
+    
   } catch (error) {
     console.error("Scan failed:", error);
-    chrome.tabs.sendMessage(tab.id, {
-      action: "showScanResult",
-      url: url,
-      result: { error: "Connection to scanner failed" }
-    });
+    throw error;
   }
 }
+
+// Message Handler
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log("Background received message:", message);
+  
+  if (message.action === "ping") {
+    sendResponse({ status: "background_ready" });
+  } else if (message.action === "getRateLimit") {
+    // Rate Limit Info direkt vom Server abrufen
+    fetch('http://localhost:8000/rate-limits')
+      .then(response => response.json())
+      .then(data => {
+        sendResponse({ rateLimitInfo: data.current_status });
+      })
+      .catch(error => {
+        sendResponse({ error: error.message });
+      });
+    return true; // Asynchrone Antwort
+  }
+  
+  return true;
+});
